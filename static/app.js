@@ -7,36 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loading');
     const resultContainer = document.getElementById('result-container');
     const testInfo = document.getElementById('test-info');
-    const debugInfo = document.getElementById('debug-info');
-    const debugContent = document.getElementById('debug-content');
-    
-    // Добавляем кнопку для отображения отладочной информации
-    const debugButton = document.createElement('button');
-    debugButton.textContent = 'Показать отладочную информацию';
-    debugButton.className = 'btn btn-secondary mt-3';
-    debugButton.style.marginLeft = '10px';
-    document.querySelector('#file-form button[type="submit"]').after(debugButton);
-    
-    debugButton.addEventListener('click', function(e) {
-        e.preventDefault();
-        debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
-    });
-    
-    // Функция для записи отладочной информации
-    function logDebug(message) {
-        console.log(message);
-        if (debugContent) {
-            debugContent.textContent += message + '\n';
-        }
-    }
-    
-    // Проверим наличие элементов при загрузке страницы
-    logDebug('DOM загружен. Проверка элементов:');
-    logDebug('Контейнер результатов: ' + (resultContainer ? 'найден' : 'не найден'));
-    logDebug('Элемент sender-size: ' + (document.getElementById('sender-size') ? 'найден' : 'не найден'));
-    logDebug('Элемент receiver-size: ' + (document.getElementById('receiver-size') ? 'найден' : 'не найден'));
-    logDebug('Элемент intersection-size: ' + (document.getElementById('intersection-size') ? 'найден' : 'не найден'));
-    logDebug('Элемент intersection-result: ' + (document.getElementById('intersection-result') ? 'найден' : 'не найден'));
     
     // Добавим элемент для отображения ошибок
     const errorContainer = document.createElement('div');
@@ -84,11 +54,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const receiverFile = document.getElementById('receiver-file').files[0];
         const useDefaultFiles = document.getElementById('use-default-files').checked;
         
-        // Очищаем отладочную информацию
-        if (debugContent) {
-            debugContent.textContent = '';
-        }
-        
         // Сбрасываем предыдущие сообщения об ошибках
         errorContainer.style.display = 'none';
         
@@ -112,10 +77,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showError('Пожалуйста, загрузите файлы в формате TXT или CSV.');
                 return;
             }
-            
-            logDebug('Отправка файлов на сервер: ' + senderFile.name + ', ' + receiverFile.name);
-        } else {
-            logDebug('Используем файлы по умолчанию');
         }
         
         toggleLoading(true, useDefaultFiles ? 
@@ -137,13 +98,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 formData.append('use_default_files', 'true');
             }
             
-            logDebug('Отправка запроса...');
             const response = await fetch('/calculate-intersection-files', {
                 method: 'POST',
                 body: formData
             });
-            
-            logDebug('Получен ответ от сервера. Статус: ' + response.status);
             
             // Проверяем статус ответа
             if (!response.ok) {
@@ -152,20 +110,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             const result = await response.json();
-            logDebug('Результат: ' + JSON.stringify(result));
             
             if (!result.success) {
                 throw new Error(result.error || 'Неизвестная ошибка при обработке данных');
             }
             
-            // Добавляем дополнительные проверки
-            logDebug('Проверка наличия полей в результате:');
-            logDebug('result.sender_size: ' + result.sender_size);
-            logDebug('result.receiver_size: ' + result.receiver_size);
-            logDebug('result.intersection_size: ' + result.intersection_size);
-            logDebug('result.intersection.length: ' + (result.intersection ? result.intersection.length : 'undefined'));
-            
-            // Явно устанавливаем значения элементов без вызова displayResult
+            // Явно устанавливаем значения элементов
             errorContainer.style.display = 'none';
             document.getElementById('sender-size').textContent = result.sender_size;
             document.getElementById('receiver-size').textContent = result.receiver_size;
@@ -174,17 +124,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Явно отображаем контейнер результатов
             resultContainer.style.display = 'block';
-            logDebug('Контейнер результатов установлен на видимый');
-            
-            // Если хотим добавить отладочную информацию
-            debugInfo.style.display = 'block';
             
             // Прокрутим страницу к результатам
             resultContainer.scrollIntoView({ behavior: 'smooth' });
         } catch (error) {
             console.error('Ошибка:', error);
             showError(`Произошла ошибка при вычислении пересечения: ${error.message}`);
-            logDebug('Ошибка: ' + error.message);
         } finally {
             toggleLoading(false);
         }
@@ -257,14 +202,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (loadingMessage) {
             loadingMessage.textContent = message;
         }
-        
-        logDebug('toggleLoading вызван с параметром show = ' + show);
-        logDebug('Состояние элемента loading: ' + loading.style.display);
-        logDebug('Состояние элемента resultContainer: ' + resultContainer.style.display);
     }
 
     function displayResult(result) {
-        logDebug('Отображение результата: ' + JSON.stringify(result));
         if (result.success) {
             errorContainer.style.display = 'none';
             
@@ -275,11 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const intersectionResult = document.getElementById('intersection-result');
             
             if (!senderSize || !receiverSize || !intersectionSize || !intersectionResult) {
-                logDebug('ОШИБКА: Не все элементы найдены!');
-                if (!senderSize) logDebug('Элемент sender-size не найден');
-                if (!receiverSize) logDebug('Элемент receiver-size не найден');
-                if (!intersectionSize) logDebug('Элемент intersection-size не найден');
-                if (!intersectionResult) logDebug('Элемент intersection-result не найден');
+                console.error('Не все элементы найдены для отображения результата');
                 return;
             }
             
@@ -291,15 +227,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Явно задаем display: block для контейнера результатов
             resultContainer.style.display = 'block';
             
-            logDebug('Контейнер результатов должен быть видимым сейчас: ' + resultContainer.style.display);
-            
-            // Отображаем отладочную информацию
-            debugInfo.style.display = 'block';
-            
             // Прокрутим страницу к результатам
             resultContainer.scrollIntoView({ behavior: 'smooth' });
         } else {
-            logDebug('Ошибка в результате: ' + (result.error || 'неизвестная ошибка'));
+            console.error('Ошибка в результате:', result.error);
             showError('Ошибка: ' + result.error);
         }
     }

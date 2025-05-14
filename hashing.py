@@ -3,10 +3,22 @@ from random import randint
 
 import mmh3
 
+import logging
+
 import math
 from math import log2, comb, ceil
 
 from config import output_bits, number_of_hashes, sender_size
+
+# Настраиваем логирование
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("psi_api")
 
 
 def calculate_bin_capacity(security_bits: int = 30) -> int:
@@ -94,7 +106,7 @@ class SimpleHash:
             self.occurrences[loc] += 1
         else:
             self.failed = True
-            print('Ошибка: превышена ёмкость корзины. Хеширование остановлено.')
+            logger.critical('Ошибка: превышена ёмкость корзины. Хеширование остановлено.')
 
 
 class CuckooHash:

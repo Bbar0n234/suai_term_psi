@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import pickle
 import uvicorn
 import os
+import logging
 from typing import List, Optional
 import io
 import traceback
@@ -14,6 +15,16 @@ import asyncio
 from client_logic import generate_query, finalize_answer
 from server_logic import preprocess_sender, process_query
 from data_generator import generate_sets_to_files
+
+# Настраиваем логирование
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
+logger = logging.getLogger("psi_api")
 
 app = FastAPI(title="PSI - Private Set Intersection")
 
@@ -80,12 +91,12 @@ async def calculate_intersection_files(
     try:
         # Если указано использовать файлы по умолчанию
         if use_default_files:
-            print("Используем файлы по умолчанию: sender.txt и receiver.txt")
+            logger.info("Используем файлы по умолчанию: sender.txt и receiver.txt")
             try:
                 # Проверяем, существуют ли файлы
                 if not os.path.exists("sender.txt") or not os.path.exists("receiver.txt"):
                     # Если нет, генерируем их
-                    print("Файлы по умолчанию не найдены, генерируем...")
+                    logger.info("Файлы по умолчанию не найдены, генерируем...")
                     generate_sets_to_files()
                 
                 # Читаем файлы
@@ -95,10 +106,10 @@ async def calculate_intersection_files(
                 with open("receiver.txt", "r") as f:
                     receiver_content = f.read().encode()
                 
-                print(f"Файлы по умолчанию прочитаны: sender.txt ({len(sender_content)} байт), receiver.txt ({len(receiver_content)} байт)")
+                logger.debug(f"Файлы по умолчанию прочитаны: sender.txt ({len(sender_content)} байт), receiver.txt ({len(receiver_content)} байт)")
             except Exception as e:
                 error_msg = str(e)
-                print(f"Ошибка при чтении файлов по умолчанию: {error_msg}")
+                logger.error(f"Ошибка при чтении файлов по умолчанию: {error_msg}")
                 return JSONResponse(
                     status_code=500,
                     content={"success": False, "error": f"Ошибка при чтении файлов по умолчанию: {error_msg}"}
@@ -122,8 +133,8 @@ async def calculate_intersection_files(
             receiver_content = await receiver_file.read()
             
             # Добавляем отладочную информацию
-            print(f"Sender file name: {sender_file.filename}, size: {len(sender_content)}")
-            print(f"Receiver file name: {receiver_file.filename}, size: {len(receiver_content)}")
+            logger.debug(f"Sender file name: {sender_file.filename}, size: {len(sender_content)}")
+            logger.debug(f"Receiver file name: {receiver_file.filename}, size: {len(receiver_content)}")
             
             # Проверяем размер файлов
             if len(sender_content) > MAX_FILE_SIZE or len(receiver_content) > MAX_FILE_SIZE:
@@ -149,8 +160,8 @@ async def calculate_intersection_files(
             )
             
         # Добавляем отладочную информацию
-        print(f"Sender set size: {len(sender_set)}")
-        print(f"Receiver set size: {len(receiver_set)}")
+        logger.debug(f"Sender set size: {len(sender_set)}")
+        logger.debug(f"Receiver set size: {len(receiver_set)}")
         
         # Добавляем проверку на слишком большие множества
         if len(sender_set) > 100000 or len(receiver_set) > 100000:
@@ -164,23 +175,24 @@ async def calculate_intersection_files(
         from config import sender_size as max_sender_size, receiver_size as max_receiver_size
         
         if len(sender_set) > max_sender_size:
-            print(f"Ограничиваем размер множества отправителя с {len(sender_set)} до {max_sender_size}")
+            logger.warning(f"Ограничиваем размер множества отправителя с {len(sender_set)} до {max_sender_size}")
             sender_set = sender_set[:max_sender_size]
             
         if len(receiver_set) > max_receiver_size:
-            print(f"Ограничиваем размер множества получателя с {len(receiver_set)} до {max_receiver_size}")
+            logger.warning(f"Ограничиваем размер множества получателя с {len(receiver_set)} до {max_receiver_size}")
             receiver_set = receiver_set[:max_receiver_size]
         
         # Запускаем PSI-протокол с таймаутом
         try:
             # Создаем задачу для вычисления PSI
+            logger.info("Начинаем вычисление PSI-протокола")
             srv_state = preprocess_sender(sender_set)
             query_bytes, client_state = generate_query(receiver_set)
             answer_bytes = process_query(pickle.loads(query_bytes), srv_state)
             intersection = finalize_answer(answer_bytes, client_state)
             
             # Добавляем отладочную информацию
-            print(f"Intersection size: {len(intersection)}")
+            logger.info(f"Intersection size: {len(intersection)}")
             
             result = {
                 "success": True,
@@ -191,13 +203,13 @@ async def calculate_intersection_files(
             }
             
             # Добавляем отладочную информацию
-            print(f"Result successfully generated")
+            logger.info("Result successfully generated")
             
             return result
         
         except Exception as e:
             error_msg = str(e)
-            print(f"Error in PSI computation: {error_msg}")
+            logger.error(f"Error in PSI computation: {error_msg}")
             return JSONResponse(
                 status_code=500,
                 content={"success": False, "error": f"Ошибка при вычислении пересечения: {error_msg}"}
@@ -205,9 +217,8 @@ async def calculate_intersection_files(
             
     except Exception as e:
         error_msg = str(e)
-        traceback_str = traceback.format_exc()
-        print(f"Error in calculate_intersection_files: {error_msg}")
-        print(f"Traceback: {traceback_str}")
+        logger.error(f"Error in calculate_intersection_files: {error_msg}")
+        logger.error(traceback.format_exc())
         return JSONResponse(
             status_code=500,
             content={"success": False, "error": f"Неожиданная ошибка: {error_msg}"}
