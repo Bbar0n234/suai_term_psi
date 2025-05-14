@@ -1,0 +1,100 @@
+/* Основные стили для PSI-приложения */
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+    padding-top: 20px;
+    padding-bottom: 40px;
+}
+
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Стили для карточек */
+.card {
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+    transition: all 0.3s ease;
+}
+
+.card:hover {
+    box-shadow: 0 6px 10px rgba(0, 0, 0, 0.15);
+}
+
+.card-header {
+    background-color: #4a6da7;
+    color: white;
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 500;
+}
+
+/* Стили для кнопок */
+.btn-primary {
+    background-color: #4a6da7;
+    border-color: #4a6da7;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background-color: #3a5892;
+    border-color: #3a5892;
+    transform: translateY(-2px);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Контейнеры состояния */
+.result-container {
+    margin-top: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.loading {
+    display: none;
+    text-align: center;
+    margin: 20px 0;
+}
+
+/* Стили для вкладок */
+.nav-tabs .nav-link {
+    color: #495057;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #4a6da7;
+    font-weight: 700;
+}
+
+.tab-content {
+    padding: 20px;
+}
+
+/* Анимация для индикатора загрузки */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner-border {
+    animation: spin 1s linear infinite;
+}
+
+/* Стили для текстовых полей */
+textarea.form-control:focus, 
+input.form-control:focus {
+    border-color: #4a6da7;
+    box-shadow: 0 0 0 0.25rem rgba(74, 109, 167, 0.25);
+}
+
+/* Медиа-запросы для адаптивности */
+@media (max-width: 768px) {
+    .container {
+        padding: 0 15px;
+    }
+} 

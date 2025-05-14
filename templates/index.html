@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Приватное пересечение множеств (PSI)</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', path='/styles.css') }}?v={{ range(100000) | random }}" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <h1 class="text-center mb-4">Приватное пересечение множеств (PSI)</h1>
+        <p class="text-center mb-4">
+            Курсовая работа студентов группы 3234к<br>
+            Феоктистов С. А., Галахов К. В., Прибыткин И. А.
+        </p>
+
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="manual-tab" data-bs-toggle="tab" data-bs-target="#manual" type="button" role="tab" aria-controls="manual" aria-selected="true">Ручной ввод</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab" aria-controls="file" aria-selected="false">Загрузка файлов</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="test-tab" data-bs-toggle="tab" data-bs-target="#test" type="button" role="tab" aria-controls="test" aria-selected="false">Тестовые данные</button>
+                    </li>
+                </ul>
+            </div>
+            <div class="tab-content" id="myTabContent">
+                <!-- Вкладка ручного ввода -->
+                <div class="tab-pane fade show active" id="manual" role="tabpanel" aria-labelledby="manual-tab">
+                    <form id="manual-form">
+                        <div class="mb-3">
+                            <label for="sender-set" class="form-label">Множество отправителя (через запятую):</label>
+                            <textarea class="form-control" id="sender-set" name="sender_set" rows="3" placeholder="1, 2, 3, 4, 5, ..."></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label for="receiver-set" class="form-label">Множество получателя (через запятую):</label>
+                            <textarea class="form-control" id="receiver-set" name="receiver_set" rows="3" placeholder="3, 4, 5, 6, 7, ..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Вычислить пересечение</button>
+                    </form>
+                </div>
+                
+                <!-- Вкладка загрузки файлов -->
+                <div class="tab-pane fade" id="file" role="tabpanel" aria-labelledby="file-tab">
+                    <form id="file-form" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="sender-file" class="form-label">Файл множества отправителя (по одному числу в строке):</label>
+                            <input class="form-control" type="file" id="sender-file" name="sender_file">
+                        </div>
+                        <div class="mb-3">
+                            <label for="receiver-file" class="form-label">Файл множества получателя (по одному числу в строке):</label>
+                            <input class="form-control" type="file" id="receiver-file" name="receiver_file">
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" class="form-check-input" id="use-default-files" name="use_default_files">
+                            <label class="form-check-label" for="use-default-files">Использовать файлы по умолчанию (sender.txt и receiver.txt)</label>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Вычислить пересечение</button>
+                    </form>
+                </div>
+                
+                <!-- Вкладка тестовых данных -->
+                <div class="tab-pane fade" id="test" role="tabpanel" aria-labelledby="test-tab">
+                    <p>Сгенерировать тестовые данные в соответствии с параметрами из config.py:</p>
+                    <button id="generate-test-btn" class="btn btn-primary">Сгенерировать тестовые множества</button>
+                    <div id="test-info" class="mt-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Индикатор загрузки -->
+        <div class="loading" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Загрузка...</span>
+            </div>
+            <p class="mt-2">Вычисление пересечения множеств...</p>
+        </div>
+
+        <!-- Контейнер для результатов -->
+        <div class="card" id="result-container" style="margin-top: 20px; display: none;">
+            <div class="card-header">Результаты</div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p><strong>Размер множества отправителя:</strong> <span id="sender-size">-</span></p>
+                    <p><strong>Размер множества получателя:</strong> <span id="receiver-size">-</span></p>
+                    <p><strong>Размер пересечения:</strong> <span id="intersection-size">-</span></p>
+                </div>
+                <div>
+                    <label for="intersection-result" class="form-label">Элементы пересечения:</label>
+                    <textarea class="form-control" id="intersection-result" rows="4" readonly></textarea>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Отладочная информация -->
+        <div id="debug-info" class="mt-3" style="display: none;">
+            <div class="alert alert-info">
+                <h5>Отладочная информация</h5>
+                <pre id="debug-content"></pre>
+            </div>
+        </div>
+        
+        <footer class="mt-5 text-center text-muted">
+            <p>PSI (Private Set Intersection) - 2024</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', path='/app.js') }}?v={{ range(100000) | random }}"></script>
+</body>
+</html> 
