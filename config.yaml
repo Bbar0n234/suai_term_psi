@@ -1,0 +1,24 @@
+# Размеры множеств элементов сервера, клиента и пересечения соответственно
+sender_size: 32768  # 2 ** 15
+receiver_size: 3214
+intersection_size: 2000
+
+# Сиды для хэш-функций в CuckooHash и SimpleHash
+hash_seeds: [31, 33, 34]
+
+# Параметры хэширования
+output_bits: 13
+
+# encryption parameters of the BFV scheme: the plain modulus and the polynomial modulus degree
+plain_modulus: 1000112129
+poly_modulus_degree: 8192  # 2 ** 13
+
+# Количество мини корзин, на которые будет происходить разбиение
+alpha: 32
+
+# windowing параметр, определяет, как значения будут возводиться в степени для последующих операций
+ell: 2
+
+# Ключи OPRF
+oprf_client_key: 987654321123456789987654321123456789
+oprf_server_key: 123456789987654321123456789987654321 

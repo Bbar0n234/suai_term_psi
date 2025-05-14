@@ -1,33 +1,28 @@
+import yaml
 from math import log2
+import os
 
-# Размеры множеств элементов сервера, клиента и пересечения соответственно
-sender_size = 2 ** 16
-receiver_size = 4000
-intersection_size = 3500
+# Путь к файлу config.yaml (относительно текущего файла)
+config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
 
-# Сиды для хэш-функций в CuckooHash и SimpleHash
-hash_seeds = [123456789, 1011121, 17181920]
+# Загрузка конфигурации из YAML
+with open(config_path, 'r') as file:
+    config = yaml.safe_load(file)
 
-# the number of hashes we use for simple/Cuckoo hashing
+# Загрузка параметров из YAML
+sender_size = config['sender_size']
+receiver_size = config['receiver_size']
+intersection_size = config['intersection_size']
+hash_seeds = config['hash_seeds']
+output_bits = config['output_bits']
+plain_modulus = config['plain_modulus']
+poly_modulus_degree = config['poly_modulus_degree']
+alpha = config['alpha']
+ell = config['ell']
+oprf_client_key = config['oprf_client_key']
+oprf_server_key = config['oprf_server_key']
+
+# Вычисляемые параметры
 number_of_hashes = len(hash_seeds)
-
-# output_bits - количество выходных бит хэш функции (mmh3)
-# mask_of_power_of_2 - битовая маска для выделения младших output_bits бит.
-output_bits = 13
 mask_of_power_of_2 = 2 ** output_bits - 1
-
-# encryption parameters of the BFV scheme: the plain modulus and the polynomial modulus degree
-plain_modulus = 536903681
-poly_modulus_degree = 2 ** 13
-
-# расчёт максимально возможной длины элементов БД (в битах), которые можно корректно закодировать в схеме
 sigma_max = int(log2(plain_modulus)) + output_bits - (int(log2(number_of_hashes)) + 1)
-
-# Количество мини корзин, на которые будет происходить разбиение
-alpha = 16
-
-# windowing параметр, определяет, как значения будут возводиться в степени для последующих операций
-ell = 2
-
-oprf_client_key = 12345678910111213141516171819222222222222
-oprf_server_key = 1234567891011121314151617181920
