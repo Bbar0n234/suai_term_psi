@@ -3,7 +3,7 @@ from client_logic   import generate_query, finalize_answer
 from server_logic   import preprocess_sender, process_query
 import pickle
 
-# 1. генерим данные
+# 1. сгенерируем данные
 generate_sets_to_files()
 sender_set   = [int(x.strip()) for x in open("sender.txt")]
 receiver_set = [int(x.strip()) for x in open("receiver.txt")]

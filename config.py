@@ -19,8 +19,6 @@ plain_modulus = config['plain_modulus']
 poly_modulus_degree = config['poly_modulus_degree']
 alpha = config['alpha']
 ell = config['ell']
-oprf_client_key = config['oprf_client_key']
-oprf_server_key = config['oprf_server_key']
 
 # Вычисляемые параметры
 number_of_hashes = len(hash_seeds)

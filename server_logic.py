@@ -4,8 +4,7 @@ import pickle
 
 import tenseal as ts
 
-from config import oprf_server_key, hash_seeds, output_bits, number_of_hashes, sigma_max, alpha, plain_modulus, ell
-from oprf import order_of_generator, G, server_prf_offline_parallel
+from config import hash_seeds, output_bits, number_of_hashes, sigma_max, alpha, plain_modulus, ell
 from hashing import SimpleHash, bin_capacity
 from utils import coeffs_from_roots, power_reconstruct
 
@@ -13,24 +12,22 @@ import numpy as np
 
 
 def preprocess_sender(sender_set):
-    # ➊ PRF‑кодируем элементы
-    point = (oprf_server_key % order_of_generator) * G
-    prfed_sender = server_prf_offline_parallel(sender_set, point)
 
-    # ➋ SimpleHash → заполнение пустых значений dummy‑элементами
+    # 1. Заполняем SimpleHash элементами
     SH = SimpleHash(hash_seeds, output_bits, bin_capacity)
-    for item in prfed_sender:
+    for item in sender_set:
         for h in range(number_of_hashes):
             SH.insert(item, h)
 
     dummy = 2 ** (sigma_max - output_bits + (int(log2(number_of_hashes))+1)) + 1
 
+    # 2. Заполняем SimpleHash dummy-элементами 
     for b in range(2 ** output_bits):
         for j in range(bin_capacity):
             if SH.hashed_data[b][j] is None:
                 SH.hashed_data[b][j] = dummy
 
-    # ➌ Делим каждую корзину на α мини‑корзин
+    # 3 Делим каждую корзину на α мини‑корзин
     poly_coeffs = []
     minibin_capacity = bin_capacity // alpha
     for b in range(2 ** output_bits):
