@@ -19,4 +19,5 @@ answer_bytes = process_query(pickle.loads(query_bytes), srv_state)
 
 # 5. клиент завершает
 intersection = finalize_answer(answer_bytes, client_state)
+
 print("│∩│ =", len(intersection))

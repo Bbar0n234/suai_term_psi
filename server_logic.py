@@ -12,30 +12,34 @@ import numpy as np
 
 
 def preprocess_sender(sender_set):
-
-    # 1. Заполняем SimpleHash элементами
-    SH = SimpleHash(hash_seeds, output_bits, bin_capacity)
+    """Предварительная обработка множества отправителя"""
+    # Инициализируем хеш таблицу и заполняем элементами
+    simple_hash = SimpleHash(hash_seeds, output_bits, bin_capacity)
     for item in sender_set:
-        for h in range(number_of_hashes):
-            SH.insert(item, h)
+        for h_idx in range(number_of_hashes):
+            simple_hash.insert(item, h_idx)
 
-    dummy = 2 ** (sigma_max - output_bits + (int(log2(number_of_hashes))+1)) + 1
+    # Значение для заполнения пустых ячеек
+    dummy_value = 2 ** (sigma_max - output_bits + (int(log2(number_of_hashes)) + 1)) + 1
 
-    # 2. Заполняем SimpleHash dummy-элементами 
-    for b in range(2 ** output_bits):
-        for j in range(bin_capacity):
-            if SH.hashed_data[b][j] is None:
-                SH.hashed_data[b][j] = dummy
+    # Заполняем пустые ячейки фиктивными значениями
+    for bin_idx in range(2 ** output_bits):
+        for pos in range(bin_capacity):
+            if simple_hash.hashed_data[bin_idx][pos] is None:
+                simple_hash.hashed_data[bin_idx][pos] = dummy_value
 
-    # 3 Делим каждую корзину на α мини‑корзин
+    # Разделяем корзины на миникорзины и вычисляем коэффициенты полиномов
     poly_coeffs = []
     minibin_capacity = bin_capacity // alpha
-    for b in range(2 ** output_bits):
-        coeffs = []
-        for j in range(alpha):
-            roots = [SH.hashed_data[b][minibin_capacity*j + r] for r in range(minibin_capacity)]
-            coeffs += coeffs_from_roots(roots, plain_modulus).tolist()
-        poly_coeffs.append(coeffs)
+    for bin_idx in range(2 ** output_bits):
+        bin_coeffs = []
+        for mini_idx in range(alpha):
+            # Получаем элементы текущей миникорзины
+            roots = [simple_hash.hashed_data[bin_idx][minibin_capacity * mini_idx + r] 
+                    for r in range(minibin_capacity)]
+            # Вычисляем коэффициенты полинома с корнями в элементах миникорзины
+            bin_coeffs += coeffs_from_roots(roots, plain_modulus).tolist()
+        poly_coeffs.append(bin_coeffs)
 
     return {
         "poly_coeffs": poly_coeffs,
@@ -44,32 +48,26 @@ def preprocess_sender(sender_set):
 
 
 def process_query(query_serialized_ctx, sender_state):
-    """
-    query_serialized_ctx  — bytes‑объект, полученный от клиента
-                            (pickle: (public_ctx_serialized, enc_query_matrix))
-    sender_state          — объект, вернувшийся из preprocess_sender().
-    Возвращает bytes (pickle) — список сериализованных шифротекстов‑ответов.
-    """
-    # ────────────────────────────────────────────────────────────────
-    poly_coeffs      = sender_state["poly_coeffs"]
+    """Обработка запроса от клиента"""
+    poly_coeffs = sender_state["poly_coeffs"]
     minibin_capacity = sender_state["minibin_capacity"]
 
-    # ➊ контекст ГШ и расшифровка матрицы шифротекстов y^(k)
-    public_ctx_ser, enc_query_serial = query_serialized_ctx # Здесь непонятно что за tuple
+    # Распаковываем контекст и зашифрованный запрос
+    public_ctx_ser, enc_query_serial = query_serialized_ctx
     ctx = ts.context_from(public_ctx_ser)
 
-    # вычислим параметры окна
-    base       = 2 ** ell
-    logB_ell   = int(log2(minibin_capacity) / ell) + 1
+    # Параметры оконного метода
+    base = 2 ** ell
+    logB_ell = int(log2(minibin_capacity) / ell) + 1
 
-    # раскладываем в матрицу ciphertext‑ов
+    # Восстанавливаем матрицу шифротекстов
     enc_query = [[None for _ in range(logB_ell)] for _ in range(base - 1)]
     for i in range(base - 1):
         for j in range(logB_ell):
             if enc_query_serial[i][j] is not None:
                 enc_query[i][j] = ts.bfv_vector_from(ctx, enc_query_serial[i][j])
 
-    # ➋ собираем все y, y², …, y^{B-1}
+    # Собираем все степени y
     all_enc_powers = [None] * minibin_capacity
     for i in range(base - 1):
         for j in range(logB_ell):
@@ -77,25 +75,27 @@ def process_query(query_serialized_ctx, sender_state):
             if exp < minibin_capacity:
                 all_enc_powers[exp] = enc_query[i][j]
 
-    # восстанавливаем «дырки» через гомоморфное power_reconstruct
+    # Восстанавливаем недостающие степени
     for k in range(minibin_capacity):
         if all_enc_powers[k] is None:
             all_enc_powers[k] = power_reconstruct(enc_query, k + 1)
 
-    # Tensil‑векторы идут от y^{B-1} к y, поэтому разворачиваем
+    # Переворачиваем для соответствия порядку в Tenseal
     all_enc_powers = all_enc_powers[::-1]
 
-    # ➌ домножение на коэффициенты полиномов и скалярные произведения
+    # Вычисляем скалярные произведения с коэффициентами полиномов
     transposed_coeffs = np.transpose(poly_coeffs).tolist()
-    server_ans_serial = []
+    server_answers = []
 
     for block in range(alpha):
-        dot = all_enc_powers[0]                        # коэффициент 1
+        # Начинаем с коэффициента при старшей степени
+        result = all_enc_powers[0]
         for j in range(1, minibin_capacity):
             coeff = transposed_coeffs[(minibin_capacity + 1) * block + j]
-            dot   = dot + coeff * all_enc_powers[j]
-        # свободный член полинома (=последний коэффициент)
-        dot = dot + transposed_coeffs[(minibin_capacity + 1) * block + minibin_capacity]
-        server_ans_serial.append(dot.serialize())
+            result = result + coeff * all_enc_powers[j]
+        
+        # Добавляем свободный член полинома
+        result = result + transposed_coeffs[(minibin_capacity + 1) * block + minibin_capacity]
+        server_answers.append(result.serialize())
 
-    return pickle.dumps(server_ans_serial)
+    return pickle.dumps(server_answers)

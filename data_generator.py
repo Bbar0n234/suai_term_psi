@@ -7,7 +7,8 @@ def generate_sets_to_files(sender_path="sender.txt", receiver_path="receiver.txt
     """
     # Используем большое число
     universe_bound = 2147483629765874212
-    # Создаем общий пул элементов для обоих множеств
+    
+    # Создаем общий набор элементов для обоих множеств
     element_pool = sample(range(universe_bound), sender_size + receiver_size)
 
     intersection = element_pool[:intersection_size]
